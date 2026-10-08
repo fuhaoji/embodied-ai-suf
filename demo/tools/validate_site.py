@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
-DOCS = ROOT / 'docs'
+DOCS = ROOT
 manifest = json.loads((DOCS / 'data/gallery.json').read_text())
 assert len(manifest['cases']) == 24
 assert len({c['id'] for c in manifest['cases']}) == 24

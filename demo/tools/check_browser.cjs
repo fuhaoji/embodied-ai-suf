@@ -3,7 +3,7 @@
 // Test under the GitHub Pages project prefix, including codec fallback and 3D.
 const fs=require('fs'), path=require('path'), http=require('http');
 const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||'playwright');
-const root=path.resolve(__dirname,'../docs'), prefix='/embodied-ai-suf/';
+const root=path.resolve(__dirname,'..'), prefix='/embodied-ai-suf/demo/';
 const artifacts=process.env.ARTIFACT_DIR||'/tmp/embodied-ai-site-check';
 fs.mkdirSync(artifacts,{recursive:true});
 const assert=(value,message)=>{if(!value)throw Error(message);};

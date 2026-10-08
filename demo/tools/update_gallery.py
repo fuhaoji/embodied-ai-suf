@@ -16,7 +16,7 @@ def main():
     parser.add_argument('--baseline', required=True, type=Path)
     parser.add_argument('--updates', type=Path)
     args = parser.parse_args()
-    docs = Path(__file__).resolve().parents[1] / 'docs'
+    docs = Path(__file__).resolve().parents[1]
     chosen = {}
     for root in [args.baseline, args.updates]:
         if root is None:
