@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore 24 recorded robotic tool-use trajectories, interactive 3D replays from Embodied AI for Scientific User Facilities.">
+  <meta name="theme-color" content="#123e42">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Robotic tool-use trajectories · Embodied AI">
+  <meta property="og:description" content="Watch 24 selected successful tool-use trajectories and explore the recorded motion in 3D.">
+  <meta property="og:url" content="https://fuhaoji.github.io/embodied-ai-suf/">
+  <meta property="og:image" content="https://fuhaoji.github.io/embodied-ai-suf/media/posters/brush__blue_brush__sweep_right.png">
+  <meta property="og:image:alt" content="Simulated robot holding a brush above a table">
+  <title>Tool-use trajectories · Embodied AI for Scientific User Facilities</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="gallery.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#trajectories">Skip to trajectories</a>
+<header class="site-header">
+  <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">e<span>ai</span></span><span>Embodied AI<span class="brand-sub">Scientific User Facilities</span></span></a>
+  <nav aria-label="Main navigation"><a href="#trajectories">Trajectories</a><a href="#about">About</a><a class="repo-link" href="https://github.com/fuhaoji/embodied-ai-suf">GitHub ↗</a></nav>
+</header>
+<main>
+  <section class="hero" aria-labelledby="hero-title">
+    <div><p class="eyebrow"><span class="live-dot"></span> Simulation study · DexToolBench</p>
+    <h1 id="hero-title">Learned tool use.<br><span>See the motion.</span></h1>
+    <p class="hero-copy">Explore robotic manipulation through recorded trajectories. Watch a policy handle everyday tools, then inspect its motion, targets, and progress in 3D.</p>
+    <div class="hero-actions"><a class="button primary" href="#trajectories">Explore trajectories <span aria-hidden="true">↓</span></a><a class="text-link" href="#about">About the study ↗</a></div></div>
+    <aside class="study-card" aria-label="Collection overview"><span class="small-label">Inside this collection</span><div class="study-number">24<span>selected successful trajectories</span></div><div class="study-grid"><div><b>12</b><span>tools</span></div><div><b>6</b><span>tool families</span></div><div><b>3D</b><span>interactive replay</span></div></div><p>Recorded Isaac Gym / PhysX motion.<br>Videos and 3D playback run in your browser.</p></aside>
+  </section>
+
+  <section id="trajectories" class="section" aria-labelledby="trajectory-title">
+    <div class="section-heading"><div><p class="eyebrow">01 / Watch & explore</p><h2 id="trajectory-title">A closer look at each task</h2></div><p>Choose a tool, watch its trajectory,<br>or open an interactive 3D replay.</p></div>
+    <p id="error" class="error" role="alert"></p>
+    <section id="player" class="player" aria-labelledby="player-title" hidden>
+      <div class="video-wrap"><video controls playsinline muted preload="metadata" aria-label="Selected robotic tool-use trajectory"></video></div>
+      <div class="player-details"><span class="pill">Completed trajectory</span><p id="player-category" class="eyebrow"></p><h3 id="player-title"></h3><p id="player-meta" class="muted"></p><p id="loading" class="muted" role="status" aria-live="polite"></p><button id="manual-play" class="button primary" hidden>Play video</button><div id="player-links" class="player-links"></div><button id="copy-link" class="button secondary" type="button">Copy link to this task</button><label id="share-fallback" hidden>Share this task<input id="share-url" readonly aria-label="Task share link"></label><p id="copy-status" class="muted" role="status" aria-live="polite"></p></div>
+    </section>
+    <div class="toolbar"><div class="filters"><label>Tool family<select id="filter"><option value="all">All families</option></select></label><label class="search-label">Find a task<input id="search" type="search" placeholder="Brush, vertical spin, wipe…"></label></div><p id="counter" role="status" aria-live="polite">Loading collection…</p></div>
+    <div id="cards" class="cards"></div><p id="empty" class="empty" hidden>No matching tasks. Try another tool or motion.</p>
+
+  </section>
+
+  <section id="about" class="section about" aria-labelledby="about-title"><div><p class="eyebrow">02 / Research context</p><h2 id="about-title">Embodied AI for<br>Scientific User Facilities</h2><p>We study learned robotic manipulation of fragile scientific specimens at DOE user facilities, beginning at SLAC’s MeV-UED facility. This site shares an early tool-use simulation study based on <a href="https://simtoolreal.github.io/">SimToolReal</a> and its DexToolBench tasks.</p><a class="text-link" href="https://github.com/fuhaoji/embodied-ai-suf">Follow the project on GitHub ↗</a></div><div class="method-card"><h3>What counts as completion?</h3><p>Every waypoint must be reached in order. All four corresponding tool keypoints must be within <b>1.5 cm</b> for one control step, so both position and orientation matter. The threshold uses the released evaluator’s nominal 1 cm tolerance and 1.5 keypoint scale.</p><p>These are rigid-tool pose-tracking simulations. Bristle flex, ink deposition, dirt removal, and nail insertion are not simulated. The clips are not real-robot demonstrations or beamline digital twins.</p><p>Recorded poses are replayed at 15 frames per second, with a one-second final hold in videos. No policy inference or server-side simulation is needed to view them.</p></div></section>
+</main>
+<footer><span>Embodied AI for Scientific User Facilities</span><div><a href="https://github.com/fuhaoji/embodied-ai-suf">Source</a><a href="https://simtoolreal.github.io/">SimToolReal</a><a href="notices.html">Attribution & licenses</a></div></footer>
+<noscript><p class="noscript">Enable JavaScript to browse the trajectory collection and interactive replays.</p></noscript>
+</body></html>
