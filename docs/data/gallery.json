@@ -12,6 +12,23 @@
   },
   "cases": [
     {
+      "id": "hammer__mallet_hammer__swing_down",
+      "category": "hammer",
+      "object": "mallet_hammer",
+      "task": "swing_down",
+      "seed": 90011,
+      "trial": 0,
+      "total_waypoints": 36,
+      "original_successes": 10,
+      "transitions": 166002163712,
+      "checkpoint_sha256": "f779cd8af3fe239c43ca47aeab3a9a93f5592429664ca23480319cffc037aca6",
+      "duration": 9.65000050328672,
+      "mp4": "media/videos/hammer__mallet_hammer__swing_down.mp4",
+      "vp8": "media/videos/hammer__mallet_hammer__swing_down.vp8.webm",
+      "poster": "media/posters/hammer__mallet_hammer__swing_down.png",
+      "trajectory": "data/trajectories/hammer__mallet_hammer__swing_down.json.gz"
+    },
+    {
       "id": "brush__blue_brush__sweep_forward",
       "category": "brush",
       "object": "blue_brush",
@@ -180,23 +197,6 @@
       "vp8": "media/videos/hammer__claw_hammer__swing_side.vp8.webm",
       "poster": "media/posters/hammer__claw_hammer__swing_side.png",
       "trajectory": "data/trajectories/hammer__claw_hammer__swing_side.json.gz"
-    },
-    {
-      "id": "hammer__mallet_hammer__swing_down",
-      "category": "hammer",
-      "object": "mallet_hammer",
-      "task": "swing_down",
-      "seed": 90011,
-      "trial": 0,
-      "total_waypoints": 36,
-      "original_successes": 10,
-      "transitions": 166002163712,
-      "checkpoint_sha256": "f779cd8af3fe239c43ca47aeab3a9a93f5592429664ca23480319cffc037aca6",
-      "duration": 9.65000050328672,
-      "mp4": "media/videos/hammer__mallet_hammer__swing_down.mp4",
-      "vp8": "media/videos/hammer__mallet_hammer__swing_down.vp8.webm",
-      "poster": "media/posters/hammer__mallet_hammer__swing_down.png",
-      "trajectory": "data/trajectories/hammer__mallet_hammer__swing_down.json.gz"
     },
     {
       "id": "hammer__mallet_hammer__swing_side",

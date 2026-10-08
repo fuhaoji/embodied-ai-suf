@@ -52,6 +52,7 @@ def main():
             stream.write(compact)
         (docs / entry['trajectory']).write_bytes(compressed.getvalue())
         cases.append(entry)
+    cases.sort(key=lambda case: case['id'] != 'hammer__mallet_hammer__swing_down')
     assert len(cases) == 24
     manifest = dict(
         policy_id=0, simulation='Isaac Gym / PhysX', seed=90011, trials_per_task=10,
