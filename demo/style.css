@@ -6,3 +6,5 @@
 @media(prefers-reduced-motion:reduce){:root{scroll-behavior:auto}*{transition:none!important}}
 
 #share-fallback{display:grid;width:100%;gap:6px;font-size:12px}#share-url{width:100%;min-width:0}
+
+.assembly-feature{display:flex;align-items:center;justify-content:space-between;gap:28px;margin:0 auto 35px;padding:26px 30px;max-width:1160px;border:1px solid var(--line,#d3dddd);border-radius:18px;background:#edf4f1}.assembly-feature h2{margin:7px 0;font-size:26px}.assembly-feature p{max-width:720px}.assembly-feature .button{flex-shrink:0}@media(max-width:700px){.assembly-feature{margin:0 18px 26px;flex-direction:column;align-items:flex-start;padding:22px}.site-header nav{flex-wrap:wrap;gap:10px}}

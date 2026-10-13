@@ -1,0 +1,13 @@
+{
+  "format": "assembly-pose-delta-v1",
+  "frames": 18985,
+  "installed_screws": 11,
+  "duration_seconds": 632.7666666666667,
+  "file": "data/assembly.json.gz",
+  "sha256": "05863924994a5d363af92508992d83e4a0d7acd15fafedf8d754b1a6804c90aa",
+  "bytes": 2366307,
+  "maximum_position_quantization_error_m": 5.00000000069889e-07,
+  "simulation": "Isaac Lab 3.0 / Newton / MuJoCo-Warp",
+  "controller": "Scripted full-state / IK",
+  "model": "Rigid bodies, magnetic screw pickup and ideal seated retention; no detailed threads or preload"
+}

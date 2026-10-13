@@ -1,0 +1,60 @@
+import * as THREE from '../replay/vendor/three.module.js';
+import {GLTFLoader} from '../replay/vendor/GLTFLoader.js';
+import {OrbitControls} from '../replay/vendor/OrbitControls.js';
+import {decodeRecording} from './decode-recording.js';
+const $=id=>document.getElementById(id),view=$('view'),renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));view.prepend(renderer.domElement);renderer.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene();scene.background=new THREE.Color('#e8eef2');const camera=new THREE.PerspectiveCamera(38,1,.0001,10);camera.up.set(0,0,1);const controls=new OrbitControls(camera,renderer.domElement);scene.add(new THREE.HemisphereLight(0xffffff,0x718592,2.4));const sun=new THREE.DirectionalLight(0xffffff,2.4);sun.position.set(.3,-.5,1.5);scene.add(sun);
+const loader=new GLTFLoader(),load=u=>new Promise((yes,no)=>loader.load(u,g=>yes(g.scene),undefined,no));let data,robot,parts,t=0,playing=false,last=0,graspYaw=0,followScrew=false,followCover=false;
+const material=(color)=>new THREE.MeshStandardMaterial({color,metalness:.35,roughness:.45});function cylinder(r,h,color){const n=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,32),material(color));n.rotation.x=Math.PI/2;return n}
+const handle=new THREE.Group(),bit=new THREE.Group();handle.add(cylinder(.012,.08,0x253c48));const stripe=new THREE.Mesh(new THREE.BoxGeometry(.002,.002,.06),material(0xf4ad32));stripe.position.y=-.012;handle.add(stripe);const shaft=cylinder(.0016,.05,0xaeb9c2);shaft.position.z=-.065;bit.add(shaft);const vv=[],ii=[];for(const [r,z] of [[.8*.0019/Math.sqrt(3),-.095],[.0019/Math.sqrt(3),-.0947],[.0019/Math.sqrt(3),-.088]])for(let i=0;i<6;i++)vv.push(r*Math.cos(i*Math.PI/3),r*Math.sin(i*Math.PI/3),z);for(let k=0;k<2;k++)for(let j=0;j<6;j++){const a=k*6+j,b=k*6+(j+1)%6;ii.push(a,b,b+6,a,b+6,a+6)}for(let i=1;i<5;i++)ii.push(0,i+1,i,12,12+i,13+i);const hex=new THREE.BufferGeometry();hex.setAttribute('position',new THREE.Float32BufferAttribute(vv,3));hex.setIndex(ii);hex.computeVertexNormals();bit.add(new THREE.Mesh(hex,material(0xd3b777)));const bitMark=new THREE.Mesh(new THREE.BoxGeometry(.0003,.00015,.010),material(0xf4ad32));bitMark.position.set(0,-.0016,-.077);bit.add(bitMark);scene.add(handle,bit);const screwMark=new THREE.Mesh(new THREE.BoxGeometry(.00035,.00022,.00004),material(0xf4ad32));screwMark.position.set(.00145,0,.00221);
+const table=new THREE.Mesh(new THREE.BoxGeometry(.475,.4,.53),material(0xb7c6cf));table.position.z=.265;scene.add(table);const floor=new THREE.GridHelper(2,20,0x94aab7,0xc6d3dc);floor.rotation.x=Math.PI/2;floor.position.z=.001;scene.add(floor);
+for(let i=0;i<8;i++){const a=i*Math.PI/4,n=cylinder(.0015,.11,0x315563);n.position.set(-.085+.007*Math.cos(a),.10+.007*Math.sin(a),.585);scene.add(n)}
+const rack=new THREE.Group();scene.add(rack);
+const coverPosts=new THREE.Group();for(const xy of [[-0.023187174412449302, -0.012037000000000025], [-0.023187174412449302, 0.01203700000000004], [0.023187174412449302, -0.012037000000000025], [0.023187174412449302, 0.01203700000000004]]){const n=cylinder(.001,.02,0x315563);n.position.set(xy[0],xy[1],-.0101);coverPosts.add(n)}scene.add(coverPosts);
+const basePosts=new THREE.Group();for(const xy of [[-.0264225,-.015437],[-.0264225,.015437],[.0264225,-.015437],[.0264225,.013037]]){const n=cylinder(.001,.02,0x315563);n.position.set(xy[0],xy[1],-.01);basePosts.add(n)}scene.add(basePosts);
+let viewScale=1;
+function fitPreset(){camera.position.sub(controls.target).multiplyScalar(viewScale).add(controls.target);controls.update()}
+const render=()=>renderer.render(scene,camera);function resize(){renderer.setSize(view.clientWidth,view.clientHeight);camera.aspect=view.clientWidth/view.clientHeight;const scale=Math.max(1,1.5/camera.aspect);camera.position.sub(controls.target).multiplyScalar(scale/viewScale).add(controls.target);viewScale=scale;camera.updateProjectionMatrix();controls.update();render()}new ResizeObserver(resize).observe(view);controls.addEventListener('change',render);controls.addEventListener('start',()=>{followScrew=false;followCover=false});
+function whole(){followScrew=false;followCover=false;camera.position.set(1.2,-1.5,1.35);controls.target.set(0,.22,.65);fitPreset()}
+function close(){followScrew=false;followCover=false;controls.target.copy(handle.position);camera.position.copy(handle.position).add(new THREE.Vector3(.23,-.25,.10).applyAxisAngle(new THREE.Vector3(0,0,1),graspYaw));fitPreset()}
+function socket(){followScrew=false;followCover=false;const v=new THREE.Vector3(...data.result.scene.seats[selectedScrew()]);v.z+=data.settings.screw_head_top;camera.position.copy(v).add(new THREE.Vector3(.012,-.025,.018));controls.target.copy(v);fitPreset()}
+function pose(n,p){n.position.fromArray(p);n.quaternion.fromArray(p,3).normalize()}
+let currentFrame;
+function selectedScrew(){return Number($('screw').value||0)}
+function jump(phase){followCover=false;const id=selectedScrew();const f=data.frames.find(f=>f.active_screw===id&&f.phase===phase);if(!f)return;seek(f.time);playing=true;$('play').textContent='Pause';if(phase==='drive')socket();else followScrew=true}
+function assembly(){followScrew=false;followCover=false;controls.target.set(.015,.055,.59);camera.position.set(-.27,-.38,.92);fitPreset()}
+function finishedView(){followScrew=false;followCover=false;const v=new THREE.Vector3(...data.result.scene.base);v.z+=.003;controls.target.copy(v);camera.position.copy(v).add(new THREE.Vector3(-.085,-.12,.105));fitPreset()}
+function seek(time){
+ if(!data)return;t=Math.max(0,Math.min(time,data.frames.at(-1).time));let lo=0,hi=data.frames.length-1;
+ while(lo<hi){const mid=Math.ceil((lo+hi)/2);if(data.frames[mid].time<=t)lo=mid;else hi=mid-1}const f=data.frames[lo];currentFrame=f;
+ data.body_labels.forEach((label,j)=>{const n=label.split('/').at(-1);if(label.includes('/Robot/')){const obj=robot.getObjectByName(n);if(obj)pose(obj,f.poses[j])}else if(n==='Cover')pose(parts.getObjectByName('cover'),f.poses[j]);else if(n==='Handle')pose(handle,f.poses[j]);else if(n==='Bit')pose(bit,f.poses[j]);else if(n==='Screw'){const k=Number(label.match(/Screw(\d+)/)?.[1]);const obj=parts.getObjectByName('screw_'+String(k+1).padStart(2,'0'));if(obj)pose(obj,f.poses[j])}});
+ if(followCover){const v=parts.getObjectByName('cover').position.clone().add(new THREE.Vector3(0,0,.015));controls.target.copy(v);camera.position.copy(v).add(new THREE.Vector3(.12,-.18,.09));fitPreset()}
+ if(followScrew){const node=parts.getObjectByName('screw_'+String(f.active_screw+1).padStart(2,'0'));const v=node.position.clone().add(new THREE.Vector3(0,0,.004));controls.target.copy(v);camera.position.copy(v).add(new THREE.Vector3(.025,-.045,.025));fitPreset()}
+ $('metrics').innerHTML=`<b>${f.phase.startsWith('cover_')||f.phase.startsWith('handoff_')?'Cover placement': 'Screw installation'} · ${f.completed_screws.length} / 11 screws installed${f.phase.startsWith('cover_')||f.phase.startsWith('handoff_')?'':' · Screw '+(f.active_screw+1)}</b><br>${f.phase.replaceAll('_',' ')}<br>${f.phase.startsWith('cover_')||f.phase.startsWith('handoff_')?'Cover contact: '+(f.cover_N||0).toFixed(2)+' N':'Grip: '+f.grip_N.toFixed(2)+' N'} · Palm: ${(f.palm_N||0).toFixed(2)} N<br>Bit–screw contact: ${f.insert_N.toFixed(3)} N<br>Magnet: ${f.magnet_active?'attached':'off'} · Seated retention: ${f.retained_screws.includes(f.active_screw)?'on':'off'}`;
+ for(const node of $('progress').children){const id=Number(node.dataset.id);node.className=f.completed_screws.includes(id)?'done':f.active_screw===id?'active':'';node.title=f.completed_screws.includes(id)?'Installed':f.active_screw===id?'Current screw':'On pickup rack'}
+ $('seek').value=t;$('clock').textContent=t.toFixed(1)+' / '+data.frames.at(-1).time.toFixed(1)+' simulated s';render();
+}
+async function change(){
+ window.demoLoading=true;playing=false;$('play').textContent='Play';$('metrics').textContent='Loading recorded assembly…';
+ if (!('DecompressionStream' in window)) throw new Error('Please use a current Chrome, Edge, Firefox or Safari browser to open this replay.');
+ const response=await fetch('data/assembly.json.gz');
+ if(!response.ok)throw new Error('The recording could not be loaded. Please reload the page.');
+ data=decodeRecording(await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).json());
+ while(rack.children.length)rack.remove(rack.children[0]);
+ for(const src of data.result.scene.sources){const pc=cylinder(.004,src[2]-.004-.53,0x496b78);pc.position.set(src[0],src[1],(.53+src[2]-.004)/2);rack.add(pc);for(const [xy,wh] of [[[-.002625,0],[.00275,.008]],[[.002625,0],[.00275,.008]],[[0,-.002625],[.0025,.00275]],[[0,.002625],[.0025,.00275]]]){const n=new THREE.Mesh(new THREE.BoxGeometry(...wh,.004),material(0x496b78));n.position.set(src[0]+xy[0],src[1]+xy[1],src[2]-.002);rack.add(n)}}
+ coverPosts.position.fromArray(data.result.scene.cover_source);const base=data.result.scene.base,yaw=data.result.scene.yaw,q=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),yaw);pose(parts.getObjectByName('base'),[...base,...q.toArray()]);pose(basePosts,[...base,...q.toArray()]);const off=new THREE.Vector3(-.0018353256,.0000089803,.0017272).applyQuaternion(q);pose(parts.getObjectByName('cover'),[base[0]+off.x,base[1]+off.y,base[2]+off.z,...q.toArray()]);
+ $('screw').replaceChildren();$('progress').replaceChildren();for(const id of data.result.requested_order){$('screw').add(new Option('Screw '+(id+1),id));const b=document.createElement('button');b.textContent=id+1;b.dataset.id=id;b.onclick=()=>{$('screw').value=id;jump('insert')};$('progress').append(b)}
+ $('seek').max=data.frames.at(-1).time;seek(0);assembly();window.demoLoading=false;document.querySelectorAll('button,select,input').forEach(n=>n.disabled=false);
+}
+document.querySelectorAll('button,select,input').forEach(n=>n.disabled=true);
+function tick(now){if(playing){seek(t+(now-last)/1000*Number($('speed').value));if(t>=data.frames.at(-1).time){playing=false;$('play').textContent='Play'}}last=now;requestAnimationFrame(tick)}
+try{
+ [robot,parts]=await Promise.all([load('../replay/assets/robot.glb'),load('assets/assembly.glb')]);scene.add(robot,parts);for(const obj of [robot,parts])obj.traverse(n=>{if(n.isMesh&&n.material){n.material.metalness=.25;n.material.roughness=.5}});
+ for(let i=1;i<=11;i++){const mark=screwMark.clone();parts.getObjectByName('screw_'+String(i).padStart(2,'0')).add(mark)}
+ function jumpStage(phase){const f=data.frames.find(f=>f.phase===phase);if(!f)return;seek(f.time);playing=true;$('play').textContent='Pause';if(phase.startsWith('cover_')){followScrew=false;followCover=true;seek(t)}else close()}
+ $('coverPickup').onclick=()=>jumpStage('cover_grip');$('coverCarry').onclick=()=>jumpStage('cover_transport');$('coverRelease').onclick=()=>jumpStage('cover_release');$('toolPickup').onclick=()=>jumpStage('grasp');
+ $('whole').onclick=whole;$('assembly').onclick=assembly;$('close').onclick=close;$('socket').onclick=socket;$('pickup').onclick=()=>{followScrew=true;seek(t)};
+ $('picking').onclick=()=>jump('insert');$('carrying').onclick=()=>{jump('carry');assembly()};$('driving').onclick=()=>jump('drive');$('finishing').onclick=()=>{seek(data.frames.at(-1).time);playing=false;$('play').textContent='Play';finishedView()};
+ $('seek').oninput=e=>seek(Number(e.target.value));$('play').onclick=()=>{if(t>=data.frames.at(-1).time)seek(0);playing=!playing;$('play').textContent=playing?'Pause':'Play'};$('reset').onclick=()=>{playing=false;$('play').textContent='Play';seek(0);assembly()};
+ await change();$('copyLink').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);$('shareStatus').textContent='Link copied';}catch{$('shareStatus').textContent='Copy the page address from your browser to share this demo.'}};requestAnimationFrame(tick);window.driverDemo={scene,camera,data:()=>data,frame:()=>currentFrame,seek,close,socket,whole,assembly,renderer};
+}catch(e){$('error').textContent=e.message;console.error(e)}

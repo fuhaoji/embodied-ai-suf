@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sample-holder assembly · Embodied AI</title>
+<meta name="description" content="An interactive 3D simulation replay: place the aluminum cover on a brass UED sample holder, then install all eleven screws with a magnetic screwdriver.">
+<meta property="og:type" content="website"><meta property="og:title" content="UED sample-holder assembly · Embodied AI">
+<meta property="og:description" content="Watch cover placement and eleven screw installations in an interactive 3D replay. Runs in your browser.">
+<meta property="og:url" content="https://fuhaoji.github.io/embodied-ai-suf/demo/assembly/">
+<meta property="og:image" content="https://fuhaoji.github.io/embodied-ai-suf/demo/assembly/assets/preview.png">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css">
+<script type="importmap">{"imports":{"three":"../replay/vendor/three.module.js"}}</script>
+</head><body>
+<a class="skip" href="#view">Skip to 3D replay</a>
+<header>
+<div class="heading"><div><a class="back" href="../">← Tool-use demos</a><p class="eyebrow">Isaac Lab 3.0 · Newton / MuJoCo-Warp</p><h1>UED sample-holder assembly</h1><p class="intro">Place the aluminum cover, then install all eleven screws.</p></div><div class="share"><button id="copyLink">Copy page link</button><span id="shareStatus" role="status"></span></div></div>
+<div class="controls" aria-label="Playback"><button id="play" class="primary">Play</button><button id="reset">Restart</button><select id="speed" aria-label="Playback speed"><option value="1">1× speed</option><option value="2">2× speed</option><option value="4" selected>4× speed</option><option value="8">8× speed</option></select><button id="assembly">Assembly view</button><button id="whole">Whole robot</button><button id="close">Driver grasp</button><button id="pickup">Follow current screw</button></div>
+<div class="controls" aria-label="Assembly stages"><span class="label">Jump to</span><button id="coverPickup">Cover pickup</button><button id="coverCarry">Cover transfer</button><button id="coverRelease">Cover release</button><button id="toolPickup">Screwdriver pickup</button></div>
+<div class="controls" aria-label="Screw stages"><select id="screw" aria-label="Screw"></select><button id="picking">Screw pickup</button><button id="carrying">Transfer</button><button id="driving">Rotation</button><button id="socket">Hole close-up</button><button id="finishing">Completed assembly</button><span id="progress" aria-label="Installed screws"></span></div>
+<div class="timeline"><input id="seek" type="range" min="0" max="1" step=".001" value="0" aria-label="Timeline"><span id="clock"></span></div><div id="error" role="alert"></div>
+</header>
+<main><div id="view" aria-label="Interactive recorded 3D assembly"><div id="metrics" role="status">Loading the recorded assembly…</div><span class="orbit-hint">Drag to orbit · Scroll to zoom</span></div></main>
+<footer><p><strong>Recorded simulation, played in your browser.</strong> This is a scripted full-state/IK demonstration. No live policy inference, simulation server, or dedicated GPU is needed to view it.</p><p>The cover is a free rigid body. The magnetic bit picks up upright screws, carries them to the holes, and rotates them through hex contact. Ideal seated retention approximates thread engagement; detailed threads, bending, tightening torque, and preload are not modeled.</p><nav><a href="../">Tool-use gallery</a><a href="../notices.html">Attribution &amp; licenses</a><a href="https://github.com/fuhaoji/embodied-ai-suf">GitHub ↗</a></nav></footer>
+<noscript><p>Enable JavaScript to view the interactive recording.</p></noscript>
+<script type="module" src="viewer.js"></script>
+</body></html>
