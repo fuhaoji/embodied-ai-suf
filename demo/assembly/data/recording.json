@@ -1,13 +1,57 @@
 {
-  "format": "assembly-pose-delta-v1",
-  "frames": 18985,
-  "installed_screws": 11,
-  "duration_seconds": 632.7666666666667,
-  "file": "data/assembly.json.gz",
-  "sha256": "05863924994a5d363af92508992d83e4a0d7acd15fafedf8d754b1a6804c90aa",
-  "bytes": 2366307,
-  "maximum_position_quantization_error_m": 5.00000000069889e-07,
-  "simulation": "Isaac Lab 3.0 / Newton / MuJoCo-Warp",
+  "format": "assembly-chapters-v2",
+  "chapters": [
+    {
+      "id": "cover",
+      "file": "data/cover.json.gz",
+      "frames": 1248,
+      "duration_seconds": 41.56666666666667,
+      "bytes": 176325,
+      "sha256": "e777ed85c0727ae44cf2473478cf3ec139fd4fd8af5266b6c949285844b8ab06",
+      "simulation": "Isaac Lab 3.0 / Newton / MuJoCo-Warp",
+      "model": "Free rigid cover, fixed brass base; no grasp attachment",
+      "maximum_position_quantization_error_m": 4.999999999588667e-07,
+      "title": "Place the cover",
+      "offset_seconds": 0
+    },
+    {
+      "id": "screws",
+      "file": "data/screws.json.gz",
+      "frames": 31496,
+      "duration_seconds": 1049.8333333333333,
+      "bytes": 6411636,
+      "sha256": "c6d96d85cdcb9737f22587371135fa2628121380672d96853c3aca6ca10de5ba",
+      "simulation": "Native MuJoCo CPU using the audited Isaac Lab scene",
+      "model": "Mechanical under-head capture, fixed seated cover, seated screw retention; no magnet",
+      "maximum_position_quantization_error_m": 5.00000000069889e-07,
+      "title": "Place and drive the screws",
+      "offset_seconds": 44.56666666666667
+    }
+  ],
+  "transition_seconds": 3,
+  "requested_order": [
+    9,
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    10
+  ],
+  "duration_seconds": 1094.3999999999999,
+  "continuous_simulation": false,
   "controller": "Scripted full-state / IK",
-  "model": "Rigid bodies, magnetic screw pickup and ideal seated retention; no detailed threads or preload"
+  "description": "Two validated recordings with an explicit scene cut. No simulated handoff between chapters.",
+  "limitations": "Rigid bodies; no detailed threads, bending, tightening torque or preload.",
+  "validation": {
+    "cover_placed": true,
+    "cover_peak_hand_force_N": 0.6653377413749695,
+    "screws_placed": 11,
+    "screws_driven": 11,
+    "no_magnetic_pickup": true
+  }
 }
