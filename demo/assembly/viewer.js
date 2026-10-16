@@ -24,6 +24,8 @@ const loader=new GLTFLoader();
 const load=url=>new Promise((resolve,reject)=>loader.load(url,g=>resolve(g.scene),undefined,reject));
 let manifest,chapters,robot,parts,cover,base,current,activeChapter=-1,bindings=[];
 let t=0,last=0,playing=false,follow=null,viewScale=1;
+let inTransition=false,transitionCamera=null,robotOpacity=1;
+const robotMaterials=[];
 const grabberObjects=[handle,button,carriage,...claws];
 const nextPosition=new T.Vector3(),nextQuaternion=new T.Quaternion();
 function pose(obj,p,next=p,blend=0){
@@ -42,68 +44,124 @@ new ResizeObserver(()=>{
  camera.position.sub(controls.target).multiplyScalar(scale/viewScale).add(controls.target);viewScale=scale;
  camera.updateProjectionMatrix();controls.update();render();
 }).observe(view);
-controls.addEventListener('change',render);controls.addEventListener('start',()=>follow=null);
+controls.addEventListener('change',render);controls.addEventListener('start',()=>{follow=null;transitionCamera=null});
 function look(target,offset){controls.target.copy(target);camera.position.copy(target).add(new T.Vector3(...offset));fitPreset()}
 function whole(){follow=null;look(new T.Vector3(0,.2,.65),[1.2,-1.7,.7])}
 function assembly(){follow=null;look(new T.Vector3(.015,.055,.59),[-.285,-.435,.33])}
-function close(){follow=null;look((activeChapter===0||current?.tool==='driver'?driverHandle:handle).position,[.20,-.25,.12])}
+function close(){follow=null;look((current?.tool==='driver'?driverHandle:handle).position,[.20,-.25,.12])}
 function selectedScrew(){return Number($('screw').value)}
 function socket(){follow=null;const v=new T.Vector3(...chapters[1].layout.seats[selectedScrew()]);v.z+=.0022;look(v,[.012,-.025,.018])}
 function fixture(obj,x,y,z){obj.position.set(x,y,z);fixtures.add(obj)}
-function clearFixtures(){
- fixtures.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose()}});fixtures.clear();
+function bodyObject(label){
+ const n=label.split('/').at(-1);
+ if(label.includes('/Robot/'))return robot.getObjectByName(n);
+ if(label.includes('/Driver/'))return n==='Handle'?driverHandle:n==='Bit'?bit:null;
+ if(n==='Cover')return cover;
+ if(n==='Screw')return screws[Number(label.match(/Screw(\d+)/)[1])];
+ return n==='Handle'?handle:n==='Button'?button:n==='Carriage'?carriage:n.startsWith('Claw')?claws[Number(n.slice(4))]:null;
 }
-function setChapter(index){
- activeChapter=index;const d=chapters[index],layout=d.layout,b=layout.base||layout.assembly_base;
- for(const obj of grabberObjects)obj.visible=index===1;
- clearFixtures();
- // Restore original CAD transforms before applying this chapter's placement.
+function buildSharedSet(){
+ // Presentation context only: use the mechanical assembly's parked tools,
+ // rack and stands in both clips. The unused legacy driver is never drawn.
+ // Keep the empty cover supports after pickup. No recorded pose is rewritten.
+ const layout=chapters[1].layout,b=layout.assembly_base;
  base.position.copy(parts.getObjectByName('base').position).add(new T.Vector3(...b));
  base.quaternion.copy(parts.getObjectByName('base').quaternion);
- cover.position.copy(parts.getObjectByName('cover').position).add(new T.Vector3(...b));
- cover.quaternion.copy(parts.getObjectByName('cover').quaternion);
  for(const xy of [[-.0264225,-.015437],[-.0264225,.015437],[.0264225,-.015437],[.0264225,.013037]])fixture(cyl(.001,.02,0x496b78),b[0]+xy[0],b[1]+xy[1],b[2]-.01);
- if(index===0){
-  const c=layout.cover_source;
-  for(const xy of [[-.0231871744,-.012037],[-.0231871744,.012037],[.0231871744,-.012037],[.0231871744,.012037]])fixture(cyl(.001,.02,0x496b78),c[0]+xy[0],c[1]+xy[1],c[2]-.0101);
- }
- for(const p of [layout.tool_position,layout.driver_position].filter(Boolean)){
+ const c=chapters[0].layout.cover_source;
+ for(const xy of [[-.0231871744,-.012037],[-.0231871744,.012037],[.0231871744,-.012037],[.0231871744,.012037]])fixture(cyl(.001,.02,0x496b78),c[0]+xy[0],c[1]+xy[1],c[2]-.0101);
+ for(const p of [layout.tool_position,layout.driver_position]){
   const z=p[2]-.04;
   for(let i=0;i<8;i++){
-   const a=i*Math.PI/4,r=layout.tool_support_radius_m??.007;
+   const a=i*Math.PI/4,r=layout.tool_support_radius_m;
    fixture((layout.tool_support_rounded?roundedPost:cyl)(.0015,z-.53,0x315563),p[0]+r*Math.cos(a),p[1]+r*Math.sin(a),(.53+z)/2);
   }
  }
  for(const c of layout.sources){
-  if(index===0){
-   fixture(cyl(.004,c[2]-.004-.53,0x496b78),c[0],c[1],(.53+c[2]-.004)/2);
-   for(const [xy,wh] of [[[-.002625,0],[.00275,.008]],[[.002625,0],[.00275,.008]],[[0,-.002625],[.0025,.00275]],[[0,.002625],[.0025,.00275]]])fixture(new T.Mesh(new T.BoxGeometry(...wh,.004),mat(0x496b78)),c[0]+xy[0],c[1]+xy[1],c[2]-.002);
-  }else{
-   const bottom=c[2]-.003175,top=c[2]-.0025,inner=.0013,outer=.0025;
-   fixture(cyl(.004,bottom-.53,0x496b78),c[0],c[1],(.53+bottom)/2);
-   for(const [xy,wh] of [[[ -(inner+outer)/2,0],[outer-inner,2*outer]],[[ (inner+outer)/2,0],[outer-inner,2*outer]],[[0,-(inner+outer)/2],[2*inner,outer-inner]],[[0,(inner+outer)/2],[2*inner,outer-inner]]])fixture(new T.Mesh(new T.BoxGeometry(...wh,top-bottom),mat(0x496b78)),c[0]+xy[0],c[1]+xy[1],(bottom+top)/2);
-  }
+  const bottom=c[2]-.003175,top=c[2]-.0025,inner=.0013,outer=.0025;
+  fixture(cyl(.004,bottom-.53,0x496b78),c[0],c[1],(.53+bottom)/2);
+  for(const [xy,wh] of [[[ -(inner+outer)/2,0],[outer-inner,2*outer]],[[ (inner+outer)/2,0],[outer-inner,2*outer]],[[0,-(inner+outer)/2],[2*inner,outer-inner]],[[0,(inner+outer)/2],[2*inner,outer-inner]]])fixture(new T.Mesh(new T.BoxGeometry(...wh,top-bottom),mat(0x496b78)),c[0]+xy[0],c[1]+xy[1],(bottom+top)/2);
+ }
+ const materials=new Map();
+ robot.traverse(obj=>{
+  if(!obj.isMesh)return;
+  const clone=original=>{
+   if(!materials.has(original)){
+    const material=original.clone();materials.set(original,material);
+    robotMaterials.push({material,opacity:original.opacity,transparent:original.transparent,depthWrite:original.depthWrite});
+   }
+   return materials.get(original);
+  };
+  obj.material=Array.isArray(obj.material)?obj.material.map(clone):clone(obj.material);
+ });
+}
+function parkedContext(){
+ const d=chapters[1],f=d.frames[0];
+ d.body_labels.forEach((label,i)=>{
+  if(label.includes('/Robot/'))return;
+  const obj=bodyObject(label);if(obj)pose(obj,f.poses[i]);
+ });
+}
+function setChapter(index){
+ activeChapter=index;const d=chapters[index];follow=null;
+ if(index===0)parkedContext();
+ else{
+  cover.position.copy(parts.getObjectByName('cover').position).add(new T.Vector3(...chapters[1].layout.assembly_base));
+  cover.quaternion.copy(parts.getObjectByName('cover').quaternion);
  }
  bindings=d.body_labels.map(label=>{
-  const n=label.split('/').at(-1);
-  if(label.includes('/Robot/'))return robot.getObjectByName(n);
-  if(label.includes('/Driver/'))return n==='Handle'?driverHandle:n==='Bit'?bit:null;
-  if(n==='Cover')return cover;
-  if(n==='Screw')return screws[Number(label.match(/Screw(\d+)/)[1])];
-  return n==='Handle'?handle:n==='Button'?button:n==='Carriage'?carriage:n.startsWith('Claw')?claws[Number(n.slice(4))]:null;
+  // Only the hand/arm and cover are active in the first recording. Other
+  // visible objects are the shared presentation set, not legacy physics data.
+  if(index===0&&!label.includes('/Robot/')&&!label.endsWith('/Cover'))return null;
+  return bodyObject(label);
  });
- // All dynamic bodies must have a renderable counterpart. Fixed fixtures are
- // rendered from this chapter's layout, not from a different simulation.
  d.body_labels.forEach((label,i)=>{
-  if(/\/Robot\/|\/Driver\/|\/Grabber\/|\/Cover$|\/Screw\d+\/Screw$/.test(label)&&!bindings[i])throw Error('Missing scene object: '+label);
+  const required=index===0?/\/Robot\/|\/Cover$/:/\/Robot\/|\/Driver\/|\/Grabber\/|\/Cover$|\/Screw\d+\/Screw$/;
+  if(required.test(label)&&!bindings[i])throw Error('Missing scene object: '+label);
  });
  $('chapter').textContent=index===0?'Stage 1 · Cover pickup, alignment and release':'Stage 2 · Mechanical screw placement → Tool change → Powered rotation';
+}
+function robotFade(amount){
+ robotOpacity=amount;robot.visible=amount>0.001;
+ for(const entry of robotMaterials){
+  const m=entry.material,transparent=amount<.999||entry.transparent;
+  if(m.transparent!==transparent){m.transparent=transparent;m.needsUpdate=true}
+  m.opacity=entry.opacity*amount;m.depthWrite=entry.depthWrite&&amount>=.999;
+ }
+}
+const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)};
+function showTransition(u){
+ // Dissolve the empty robot between two real poses; do not interpolate links
+ // or suggest that an unvalidated arm trajectory was simulated.
+ if(u>=.5){
+  const d=chapters[1],f=d.frames[0];
+  d.body_labels.forEach((label,i)=>{if(label.includes('/Robot/'))pose(bodyObject(label),f.poses[i])});
+ }
+ robotFade(u<.5?1-smooth(2*u):smooth(2*u-1));
+ if(transitionCamera){
+  const w=smooth(u);
+  camera.position.copy(transitionCamera.position).lerp(transitionCamera.endPosition,w);
+  controls.target.copy(transitionCamera.target).lerp(transitionCamera.endTarget,w);controls.update();
+ }
 }
 function seek(time){
  if(!chapters)return;t=Math.max(0,Math.min(time,manifest.duration_seconds));
  const transition=t>manifest.chapters[0].duration_seconds&&t<manifest.chapters[1].offset_seconds;
  const index=t>=manifest.chapters[1].offset_seconds?1:0;
- if(index!==activeChapter){follow=null;setChapter(index);assembly()}
+ if(transition&&!inTransition){
+  if(follow){
+   const target=new T.Vector3(.015,.055,.59);
+   transitionCamera={position:camera.position.clone(),target:controls.target.clone(),endTarget:target,
+    endPosition:target.clone().add(new T.Vector3(-.285,-.435,.33).multiplyScalar(viewScale))};
+  }
+  follow=null;
+ }
+ if(!transition&&inTransition){
+  if(transitionCamera&&index===1){camera.position.copy(transitionCamera.endPosition);controls.target.copy(transitionCamera.endTarget);controls.update()}
+  transitionCamera=null;
+ }
+ inTransition=transition;
+ if(index!==activeChapter)setChapter(index);
  const d=chapters[index],local=Math.min(t-manifest.chapters[index].offset_seconds,d.frames.at(-1).time);
  let lo=0,hi=d.frames.length-1;
  while(lo<hi){const mid=Math.ceil((lo+hi)/2);if(d.frames[mid].time<=local)lo=mid;else hi=mid-1}
@@ -111,6 +169,8 @@ function seek(time){
  const blend=next.time>f.time?(local-f.time)/(next.time-f.time):0;current=f;
  bindings.forEach((obj,i)=>{if(obj)pose(obj,f.poses[i],next.poses[i],blend)});
  $('transition').hidden=!transition;
+ $('metrics').hidden=transition;
+ if(transition)showTransition((t-manifest.chapters[0].duration_seconds)/manifest.transition_seconds);else robotFade(1);
  if(follow==='cover')look(cover.position.clone().add(new T.Vector3(0,0,.015)),[.12,-.18,.09]);
  if(follow==='screw')look(screws[f.active_screw].position.clone().add(new T.Vector3(0,0,.003)),[.025,-.045,.025]);
  const placed=f.placed||[],driven=f.driven||[];
@@ -149,12 +209,13 @@ function tick(now){
 document.querySelectorAll('button,select,input').forEach(n=>n.disabled=true);
 try{
  if(!('DecompressionStream' in window))throw Error('Please use a current Chrome, Edge, Firefox or Safari browser.');
- const response=await fetch('data/recording.json?v=claw-cover-2');if(!response.ok)throw Error('Recording index unavailable');manifest=await response.json();
+ const response=await fetch('data/recording.json?v=shared-scene-3');if(!response.ok)throw Error('Recording index unavailable');manifest=await response.json();
  if(manifest.format!=='assembly-chapters-v2')throw Error('Please refresh this page to load the updated demo.');
  [robot,parts,chapters]=await Promise.all([load('../replay/assets/robot.glb'),load('assets/assembly.glb'),Promise.all(manifest.chapters.map(recording))]);
  scene.add(robot);base=parts.getObjectByName('base').clone();cover=parts.getObjectByName('cover').clone();scene.add(base,cover);
  const screw=parts.getObjectByName('screw_01');
  for(let i=0;i<11;i++){const o=screw.clone();screws.push(o);scene.add(o)}
+ buildSharedSet();
  for(const id of manifest.requested_order){
   $('screw').add(new Option('Screw '+(id+1),id));
   const b=document.createElement('button');b.textContent=id+1;b.dataset.id=id;b.onclick=()=>{$('screw').value=id;jump(1,'close_claws',true)};$('progress').append(b);
@@ -169,6 +230,7 @@ try{
  $('reset').onclick=()=>{setPlaying(false);seek(0);assembly()};
  $('copyLink').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);$('shareStatus').textContent='Link copied'}catch{$('shareStatus').textContent='Copy the page address from your browser to share this demo.'}};
  seek(0);assembly();document.querySelectorAll('button,select,input').forEach(n=>n.disabled=false);
- window.assemblyDemo={scene,camera,renderer,manifest,chapters,frame:()=>current,chapter:()=>activeChapter,time:()=>t,seek,setPlaying,cover,base,bindings:()=>bindings};
+ window.assemblyDemo={scene,camera,renderer,manifest,chapters,frame:()=>current,chapter:()=>activeChapter,time:()=>t,seek,setPlaying,cover,base,bindings:()=>bindings,robot,robotOpacity:()=>robotOpacity,target:()=>controls.target.clone(),
+  sharedProps:()=>[...grabberObjects,driverHandle,bit,...screws,base,...fixtures.children]};
  requestAnimationFrame(tick);
 }catch(e){$('error').textContent=e.message;console.error(e)}

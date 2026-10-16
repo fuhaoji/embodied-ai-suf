@@ -102,7 +102,8 @@ def main():
                     duration_seconds=b['offset_seconds'] + b['duration_seconds'],
                     continuous_simulation=False,
                     controller='Scripted full-state / IK',
-                    description='Two validated recordings with an explicit scene cut. No simulated handoff between chapters.',
+                    description='Two validated recordings in a shared visual layout, with an explicit robot dissolve. No simulated handoff between chapters.',
+                    presentation={'shared_layout': 'screw stage tools, parked screws and fixtures; cover supports retained', 'cover_stage_context': 'Unused legacy driver replaced by parked grabber and driver from screw-stage frame zero', 'transition': 'Robot opacity dissolve between recorded end/start poses; no synthesized movement', 'camera': 'Preserve orbit view; ease out only when leaving an automatic cover-follow view'},
                     limitations='Rigid bodies; no detailed threads, bending, tightening torque or preload.',
                     validation=dict(cover_placed=True, cover_peak_hand_force_N=cr['peak_forces']['cover_N'],
                                     screws_placed=11, screws_driven=11, no_magnetic_pickup=True))

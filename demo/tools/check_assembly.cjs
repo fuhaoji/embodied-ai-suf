@@ -47,13 +47,40 @@ const server=http.createServer((req,res)=>{
  await jump('coverRelease','cover_release',0);await page.screenshot({path:path.join(artifacts,'cover-release.png')});
  await page.evaluate(()=>assemblyDemo.seek(assemblyDemo.manifest.chapters[0].duration_seconds));
  assert(await page.evaluate(()=>Math.abs(assemblyDemo.cover.position.z-.5517272)<.0002),'Cover not physically seated');
- await page.evaluate(()=>assemblyDemo.seek(assemblyDemo.manifest.chapters[0].duration_seconds+1));
- assert(await page.locator('#transition').isVisible(),'Scene cut not marked');
+ // A manually selected camera must stay put through the transition. Tools,
+ // screws, stands, table supports and base must retain identities and poses.
+ await page.click('#assembly');
+ const shared=await page.evaluate(()=>{
+  const d=assemblyDemo,start=d.manifest.chapters[0].duration_seconds,span=d.manifest.transition_seconds;
+  const snapshot=()=>d.sharedProps().map(o=>({uuid:o.uuid,visible:o.visible,p:o.position.toArray(),q:o.quaternion.toArray()}));
+  d.seek(0);const reference=snapshot(),camera=d.camera.position.toArray(),target=d.target().toArray();
+  const points=[0,10.6,37.35,start,start+span*.25,start+span*.5,start+span*.75,start+span];
+  const records=points.map(time=>{d.seek(time);return {time,props:snapshot(),camera:d.camera.position.toArray(),target:d.target().toArray(),opacity:d.robotOpacity()}});
+  return {reference,camera,target,records};
+ });
+ for(const frame of shared.records){
+  assert(JSON.stringify(frame.props)===JSON.stringify(shared.reference),'Tool or fixture changed at '+frame.time);
+  assert(JSON.stringify(frame.camera)===JSON.stringify(shared.camera)&&JSON.stringify(frame.target)===JSON.stringify(shared.target),'Camera jumped at '+frame.time);
+ }
+ assert(shared.records[5].opacity===0,'Robot must be invisible at the recorded-pose switch');
+ assert(shared.records[4].opacity===.5&&shared.records[6].opacity===.5,'Missing robot dissolve');
+ // Only the cover/robot bindings are driven by the cover recording; tools use
+ // the parked mechanical scene. Active screw-stage poses are checked below.
+ await jump('coverRelease','cover_release',0);
+ const start=await page.evaluate(()=>assemblyDemo.manifest.chapters[0].duration_seconds);
+ await page.evaluate(t=>assemblyDemo.seek(t),start+.75);
+ assert(await page.locator('#transition').isVisible(),'Replay dissolve not identified');
+ assert(await page.evaluate(()=>assemblyDemo.renderer.domElement.offsetHeight>300),'Scene hidden by transition');
  await page.screenshot({path:path.join(artifacts,'transition.png')});
  await page.evaluate(()=>{assemblyDemo.seek(assemblyDemo.manifest.chapters[1].offset_seconds-.05);assemblyDemo.setPlaying(true)});
  await page.waitForFunction(()=>assemblyDemo.chapter()===1);await page.evaluate(()=>assemblyDemo.setPlaying(false));
  assert(await page.locator('#transition').isHidden(),'Transition obscures second stage');
- assert(await page.evaluate(()=>Math.abs(assemblyDemo.camera.position.x+.27)<.00001),'Scene cut did not restore the assembly camera');
+ assert(await page.evaluate(()=>Math.abs(assemblyDemo.camera.position.x+.27)<.00001),'Cover-follow camera did not ease to assembly view');
+ // Rewinding after driving restores both parked tools, all screws and robot opacity.
+ await page.evaluate(()=>{assemblyDemo.seek(assemblyDemo.manifest.duration_seconds);assemblyDemo.seek(0)});
+ assert(await page.evaluate(()=>assemblyDemo.robotOpacity()===1),'Rewind left the robot faded');
+ const rewind=await page.evaluate(()=>assemblyDemo.sharedProps().map(o=>({uuid:o.uuid,visible:o.visible,p:o.position.toArray(),q:o.quaternion.toArray()})));
+ assert(JSON.stringify(rewind)===JSON.stringify(shared.reference),'Rewind left stale scene objects');
  await jump('toolPickup','grasp',1);await page.screenshot({path:path.join(artifacts,'grabber-pickup.png')});
  const order=await page.evaluate(()=>assemblyDemo.manifest.requested_order);
  for(const id of order){
@@ -89,6 +116,6 @@ const server=http.createServer((req,res)=>{
  await frame.click('#coverRelease');await frame.evaluate(()=>assemblyDemo.setPlaying(false));assert(await frame.evaluate(()=>assemblyDemo.frame().phase==='cover_release'),'Embedded cover control failed');
  await frame.click('#releasing');await frame.evaluate(()=>assemblyDemo.setPlaying(false));assert(await frame.evaluate(()=>assemblyDemo.frame().phase==='open_claws'),'Embedded screw control failed');
  assert(errors.length===0,errors.join('\n'));assert(failed.length===0,failed.join('\n'));
- const report={passed:true,prefix,frames:info.frames,screws:order.length,explicit_scene_cut:true,all_release_controls:true,existing_gallery:true,mobile:true,embedded:true,playback:true,share:true,errors,failed};
+ const report={passed:true,prefix,frames:info.frames,screws:order.length,shared_scene:true,stable_parked_tools_and_fixtures:true,no_camera_jump:true,robot_dissolve:true,rewind_consistent:true,all_release_controls:true,existing_gallery:true,mobile:true,embedded:true,playback:true,share:true,errors,failed};
  fs.writeFileSync(path.join(artifacts,'browser.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
  }finally{if(browser)await browser.close();server.close()}})().catch(e=>{console.error(e);process.exitCode=1});
